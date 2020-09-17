@@ -16,7 +16,6 @@ char *extchng(char *initname, char *newExt)
     {
         if(initname[i]=='.')
          {
-             printf("\nlast period found at: %d\n", i);
              dotloc = i;
              dotfound = 1;
              break;

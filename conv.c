@@ -100,7 +100,7 @@ struct filedata *filetomatrix(char* fileloc)
     printf("\n Filematrix: \n");
     for(int i=0;i<thisptr->x;i++){
         for(int j=0;j<thisptr->y;j++){
-            printf("%d ", thisptr->dataframe[i][j]);
+            printf("%d ", &frame[i][j]);
         }
         printf("\n");
     }

@@ -9,14 +9,11 @@ int main(int argc, char** argv)
     struct kernel *cur;
     int flag=1;
 
-
-    while(flag)
-    {   char choice='\0';
+    char choice='\0';
+    while(choice!=0)
+    {   
         printf("\n1. Encrypt   2. Decrypt   0. exit\n");
         scanf(" %c", &choice);
-        if(choice =='0'){
-          exit(0);
-        }
 
         if(choice!='1'&&choice!='2'&&choice!='3'&&choice!='\0'){
             printf("\nInvalid choice\n");
