@@ -10,7 +10,6 @@
 const int mat_size = 3;
 
 
-
 struct kernel *r_kernelize(char inp[10]){
     srand(time(0));
     int rnd[9], kernel[9]; int flags[10]={0};
@@ -28,18 +27,19 @@ struct kernel *r_kernelize(char inp[10]){
         if(flags[num]) continue;
         else{
             flags[num]=1;
-            rnd[x] = num;
-            x = x + 1;
+            rnd[x++] = num;
         }
     }
     
     //create a 3x3 kernel with input characters arranged
     //randomly based on randomized indices list obtained
     //in previous step
+    int tempindex=0;
     for(int p=0; p<strlen(inp); p++){
         y_coord = rnd[p]%mat_size;
         x_coord = rnd[p]/mat_size;
         kern->W[x_coord][y_coord] = inp[p];
+        kern->ordarray[tempindex++] = rnd[p];    
     }
     return kern;
 }
@@ -47,7 +47,7 @@ struct kernel *r_kernelize(char inp[10]){
 
 
 
-struct filedata *filetomatrix(char* fileloc)
+struct filedata *filetomatrix(char* fileloc, char* type)
 {
     long xsize=0,ysize=0;
     struct filedata *thisptr = (struct filedata*)malloc(sizeof(struct filedata));
@@ -61,6 +61,13 @@ struct filedata *filetomatrix(char* fileloc)
     fseek(file, 0, SEEK_END);
     long size = ftell(file);
     fseek(file, 0, SEEK_SET);
+    char *buff=0; int loc=0;
+    if(strcmp(type, "deconv")==0){
+        buff = malloc(size);
+        fread(buff, 1, size, file);
+        loc = strrchr(buff, '.');
+        printf("\nlast occ of '.' found at %d\n", loc);
+    }
 
     printf("\nFilesize: %ld\n", size);
 
@@ -80,17 +87,20 @@ struct filedata *filetomatrix(char* fileloc)
         frame[i] = (int *)malloc(ysize * sizeof(int));
 
     printf("creating file matrix of dimensions: %lux%lu \n", xsize,ysize);
+
+
     int bfr = 0;
     for(int i=0;i<xsize;i++)
         for(int j=0;j<ysize;j++){
             if(bfr!=EOF){
-                fread(&bfr, sizeof(bfr)+1, 1, file); 
+                bfr = fgetc(file);
                 frame[i][j]=bfr;
             }
 
             else
                 frame[i][j]=0;
         }
+    printf("\n");
     thisptr->dataframe = frame;
     thisptr->x = xsize;
     thisptr->y = ysize;
@@ -100,11 +110,11 @@ struct filedata *filetomatrix(char* fileloc)
     printf("\n Filematrix: \n");
     for(int i=0;i<thisptr->x;i++){
         for(int j=0;j<thisptr->y;j++){
-            printf("%d ", &frame[i][j]);
+            printf("%d ", frame[i][j]);
         }
         printf("\n");
     }
-
+    
 
     return thisptr;
 }
@@ -117,17 +127,22 @@ int writedatatofile(struct kernel *krn, struct filedata *f, char *filename) //wr
         return 0;
     }
     int counter=0;
+
+    printf("\nWriting to file: \n");
     for(int i=0;i<f->x;i++){
         for(int j=0;j<f->y;j++){
             if(counter<=f->filesize){
-                int x = f->dataframe[i][j];
-                fwrite(&x, sizeof(x), 1, filenew); //dump encrypted data to file
+                int q = f->dataframe[i][j];
+               // printf("%d ", q);//dump encrypted data to file
+                fwrite(&q, 1, 1, filenew);
                 counter++;
             }
         }
     }
     fclose(filenew);
     printf("\ncombining kernel to create password........");
+
+
     unsigned char pswbuf[20], buffer[65],ordbuf[10]={0}, ord[10]={0};
     unsigned char *psw=(unsigned char*)strdup("");
     int tempindex = 0;
@@ -155,7 +170,7 @@ int writedatatofile(struct kernel *krn, struct filedata *f, char *filename) //wr
       }
 
       fputs((const char*)buffer, file);  //append hash
-      for(unsigned long int x=0;x<((sizeof(krn->ordarray))/(sizeof(krn->ordarray[0])));x++){
+      for(int x=0;x<((sizeof(krn->ordarray))/(sizeof(krn->ordarray[0])));x++){
          sprintf((char *)ordbuf, "%d", krn->ordarray[x]); //append secret string
          strcat(ord, ordbuf);
       }
@@ -172,59 +187,6 @@ int writedatatofile(struct kernel *krn, struct filedata *f, char *filename) //wr
 
     return 1;
 }
-
-
-
-
-int conv(struct kernel *krn, char *filename)
-{
-    struct filedata *f = filetomatrix(filename);
-    if(f==NULL){
-      printf("\nError converting file to dataframe\n");
-      return 0;
-    }
-
-
-    if(strstr(filename,".msencrptd")){
-      printf("File already encrypted");
-      return 0;
-    }
-
-    int nC = (f->y -3+1), nR = (f->x -3+1);
-    printf("# of convolutions: horizontal- %d, Vertical- %d\n", nC, nR);
-    int ptrX = 0, ptrY = 0;
-    for(int i=0;i<nR;i++){
-        ptrY=0;
-        for(int j=0;j<nC;j++)
-        {
-            for(int k=ptrX;k<ptrX+3;k++){
-                for(int l=ptrY;l<ptrY+3;l++){
-                   // f->dataframe[k][l] = (krn->W[k-ptrX][l-ptrY])*(f->dataframe[k][l]);
-                    f->dataframe[k][l] = rotateleft((f->dataframe[k][l]), (krn->W[k-ptrX][l-ptrY]));        //add any reversible encryption function here...
-                }
-            }
-            ptrY++;
-        }
-        ptrX++;
-    }
-    int x = writedatatofile(krn, f, filename);
-    if(!x){
-      printf("\nError occured while writing data to file");
-      return 0;
-    }
-
-    /*printf("\npost encryption:\n");
-    for(int i=0;i<f->x;i++){
-      for(int j=0;j<f->y;j++){
-        printf("%d ", f->dataframe[i][j]);
-      }
-      printf("\n");
-    }*/
-    return 1;
-}
-
-
-
 
 
 int verify(char *pass, char *filename)
@@ -252,26 +214,26 @@ int verify(char *pass, char *filename)
     for(int i=0;i<64;i++)   hashstring[i]= fgetc(file);
 
     char *sizestring= (char*)malloc(sizeof(char*)*16);
-    for(int i=0;i<16;i++)   sizestring[i]= fgetc(file);
+    for(int i=0;i<16;i++) sizestring[i]= fgetc(file);
 
     long ogsize = atoi(sizestring);
     printf("\noriginal filesize: %ld\n", ogsize);
+    
     for(int x=0;x<9;x++) rnd[x]=fgetc(file);
-
     for(int i=0;i<strlen(pass);i++){
+        printf("%d ", rnd[i]);
         y_coord = (rnd[i]-48)%mat_size;
         x_coord = (rnd[i]-48)/mat_size;
         kern[x_coord][y_coord] = pass[i];
     }
 
-    char pswbuff[20]= "",temp[10]; int tempindex=0;
+    char pswbuff[20],temp[10]; int tempindex=0;
     for(int x=0;x<3;x++){
         for(int y=0;y<3;y++){
             int t = kern[x][y];
             if(t!=1) pswbuff[tempindex++] = kern[x][y];
         }
     }
-
     struct kernel *cur = (struct kernel*)malloc(sizeof(struct kernel));
     memset(cur->W, 0, sizeof(kern[0][0])*9);
     memcpy(cur->W, kern, sizeof(kern));
@@ -279,7 +241,6 @@ int verify(char *pass, char *filename)
     
     if(strcmp(shabuff, hashstring)!=0)
         return -1;
-
     else
     {
         int data = 0;
@@ -292,18 +253,64 @@ int verify(char *pass, char *filename)
         }
         fclose(tempfileptr);
         int check = deconv(cur, "temp");
-       // remove("temp");
-        //if(check==1){}
-           // rename
     }
     fclose(file);
     return 0;
 }
 
 
+
+int conv(struct kernel *krn, char *filename)
+{
+    struct filedata *f = filetomatrix(filename, "conv");
+    if(f==NULL){
+      printf("\nError converting file to dataframe\n");
+      return 0;
+    }
+    if(strstr(filename,".msencrptd")){
+      printf("File already encrypted");
+      return 0;
+    }
+
+    int nC = (f->y -3+1), nR = (f->x -3+1);
+    printf("# of convolutions: horizontal- %d, Vertical- %d\n", nC, nR);
+    int ptrX = 0, ptrY = 0;
+    for(int i=0;i<nR;i++){
+        ptrY=0;
+        for(int j=0;j<nC;j++)
+        {
+            for(int k=ptrX;k<ptrX+3;k++){       //iterate the 3x3 kernel over entire file. Time: 9n
+                for(int l=ptrY;l<ptrY+3;l++){
+                   // f->dataframe[k][l] = (krn->W[k-ptrX][l-ptrY])*(f->dataframe[k][l]);
+                    f->dataframe[k][l] = rotateleft((f->dataframe[k][l]), (krn->W[k-ptrX][l-ptrY]));        //add any reversible encryption function here...
+                }
+            }
+            ptrY++;
+        }
+        ptrX++;
+    }
+    int x = writedatatofile(krn, f, filename);
+    if(!x){
+      printf("\nError occured while writing data to file");
+      return 0;
+    }
+
+    printf("\npost encryption:\n");
+    for(int i=0;i<f->x;i++){
+      for(int j=0;j<f->y;j++){
+        printf("%d ", f->dataframe[i][j]);
+      }
+      printf("\n");
+    }
+    return 1;
+}
+
+
+
+
 int deconv(struct kernel *krn, char *filename)
 {
-    struct filedata *f = filetomatrix(filename);
+    struct filedata *f = filetomatrix(filename, "deconv");
 
     int nC = (f->y -2), nR = (f->x -2); //filematrix axis size + kernel size - 1
     printf("# of convs: horizontal: %d, Vertical: %d\n", nC, nR);
@@ -314,7 +321,7 @@ int deconv(struct kernel *krn, char *filename)
             for(int k=ptrX;k<ptrX+3;k++){
                 for(int l=ptrY;l<ptrY+3;l++){
                     //f->dataframe[k][l] = ((f->dataframe[k][l])/(krn->W[k-ptrX][l-ptrY]));
-                   f->dataframe[k][l] = rotateright((f->dataframe[k][l]),(krn->W[k-ptrX][l-ptrY]));
+                 //  f->dataframe[k][l] = rotateright((f->dataframe[k][l]),(krn->W[k-ptrX][l-ptrY]));
                 }
             }
             ptrY--;

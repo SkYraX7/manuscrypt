@@ -1,7 +1,7 @@
 #include "conv.h"
-
 //Edgecases yet to be handled:
 //  filesize less than a threshold or smaller than kernel
+
 
 int main(int argc, char** argv)
 {
@@ -10,15 +10,23 @@ int main(int argc, char** argv)
     int flag=1;
 
     char choice='\0';
-    while(choice!=0)
+    while(flag)
     {   
-        printf("\n1. Encrypt   2. Decrypt   0. exit\n");
+        printf("\n1. Encrypt   2. Decrypt   3. RevertFile   0. exit\n");
         scanf(" %c", &choice);
-
-        if(choice!='1'&&choice!='2'&&choice!='3'&&choice!='\0'){
+        
+        if(choice!='1'&&choice!='2'&&choice!='3'&&choice!='0'){
             printf("\nInvalid choice\n");
             continue;
         }
+        if(choice=='3') //TEST FUNCTION!! REMOVE DURING FINAL COMMIT
+        {
+            system("cp 16bytecp.txt 16byte.msencrptd");
+            system("mv 16byte.msencrptd 16byte.txt");
+            continue;
+        }
+        if(choice=='0')
+            exit(0);
 
         printf("\nEnter name of the file: \n");
         scanf(" %s", rel);
@@ -38,11 +46,11 @@ int main(int argc, char** argv)
             }
 
             int con = conv(cur, rel);
-            if(con){
+            if(con)
                 printf("\n File successfully encrypted");
-                //printf("\e[1;1H\e[2J");
-                continue;
-            }
+            else
+                printf("Conv() returned with error code");
+            continue;
         }
         if(choice=='2'){
             if(strstr(rel,".msencrptd")==NULL){
@@ -60,6 +68,7 @@ int main(int argc, char** argv)
                 }
             }
         }
+
         return 1;
     }
     printf("\nThe End!");

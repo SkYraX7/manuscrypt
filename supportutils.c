@@ -22,7 +22,7 @@ char *extchng(char *initname, char *newExt)
          }   
     }
 
-    if(dotfound==1)
+    if(dotfound)
     {
         for(int i=0;i<dotloc;i++) newfilename[i]=initname[i];
         strcat(newfilename, newExt);

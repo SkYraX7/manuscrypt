@@ -23,7 +23,7 @@ struct filedata
 };
 
 struct kernel *r_kernelize(char inp[10]);
-struct filedata *filetomatrix(char* fileloc);
+struct filedata *filetomatrix(char* fileloc, char*optype);
 int conv(struct kernel *cur, char *filename);
 int deconv(struct kernel *krn, char *filename);
 int verify(char *pass, char *filename);
