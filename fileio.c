@@ -73,13 +73,13 @@ int write_encrypted(const char *path, const uint8_t *data, uint32_t data_len,
     snprintf(iter, sizeof(iter), "%03d", iterations);
     fwrite(iter, 1, 3, f);
 
-    /* Append extension: length (1 byte) + extension string */
+    /* Append extension: extension string + length (1 byte) - length goes LAST for easy reading */
     size_t ext_strlen = extension ? strlen(extension) : 0;
     uint8_t ext_len = (ext_strlen > 255) ? 255 : (uint8_t)ext_strlen;  /* Clamp to 255 */
-    fwrite(&ext_len, 1, 1, f);
     if (ext_len > 0) {
         fwrite(extension, 1, ext_len, f);
     }
+    fwrite(&ext_len, 1, 1, f);  /* Write length last so we can read it from a fixed position */
 
     fclose(f);
     return 1;
